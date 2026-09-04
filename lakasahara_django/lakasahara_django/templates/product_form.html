@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} — L.A{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+  <div style="max-width:700px"><div class="card card-body"><h3 style="font-weight:800;margin-bottom:0.25rem">{{ title }}</h3><p style="color:var(--pharma-muted);font-size:0.88rem;margin-bottom:1.5rem">{% if product %}Update the details below.{% else %}Fill in the product information.{% endif %}</p><form method="post">{% csrf_token %}<div class="grid-2">{% for field in form %}<div class="form-group" {% if field.name == 'name' or field.name == 'image_url' %}style="grid-column:1/-1"{% endif %}><label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div style="color:var(--pharma-danger);font-size:0.8rem;margin-top:0.3rem">{{ field.errors.0 }}</div>{% endif %}</div>{% endfor %}</div><div style="display:flex;gap:0.75rem;margin-top:1.25rem"><a href="{% url 'products' %}" class="btn btn-light" style="flex:1;text-align:center">Cancel</a><button type="submit" class="btn btn-primary" style="flex:2;border-radius:1rem">{% if product %}Save Changes{% else %}Add Product{% endif %}</button></div></form></div></div>
+{% endblock %}
