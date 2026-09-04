@@ -1,0 +1,135 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{% block title %}Lakasahara Medical Supplies Co.{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=13">
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="sidebar-logo">Rx</div>
+          <div class="sidebar-brand-text">
+            <div class="sidebar-brand-name">Lakasahara Medical</div>
+            <div class="sidebar-brand-sub">Supplies Co. · L.A</div>
+          </div>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="{% url 'dashboard' %}" class="nav-link {% if 'dashboard' in request.resolver_match.url_name %}active{% endif %}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            Dashboard
+          </a>
+          {% if role == 'admin' %}
+            <a href="{% url 'products' %}" class="nav-link {% if request.resolver_match.url_name == 'products' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+              </svg>
+              Products
+            </a>
+          {% endif %}
+          {% if role == 'admin' or role == 'pharmacist' %}
+            <a href="{% url 'inventory' %}" class="nav-link {% if request.resolver_match.url_name == 'inventory' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 8h14M5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm14 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M10 12h4"/>
+              </svg>
+              Inventory
+            </a>
+          {% endif %}
+          {% if role == 'staff' %}
+            <a href="{% url 'sales' %}" class="nav-link {% if request.resolver_match.url_name == 'sales' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="9" cy="21" r="1"/>
+                <circle cx="20" cy="21" r="1"/>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+              </svg>
+              Sales POS
+            </a>
+          {% endif %}
+          {% if role == 'admin' or role == 'pharmacist' %}
+            <a href="{% url 'reports' %}" class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              Reports
+            </a>
+            <a href="{% url 'expiry' %}" class="nav-link {% if request.resolver_match.url_name == 'expiry' %}active{% endif %}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              Expiry
+            </a>
+          {% endif %}
+        </nav>
+        <div class="sidebar-footer">
+          <div class="user-chip">
+            <div class="avatar">{{ request.user.first_name|slice:":1" }}{{ request.user.last_name|slice:":1" }}</div>
+            <div><div class="user-name">{{ request.user.get_full_name }}</div><div class="user-role">{{ role }}</div></div>
+          </div>
+          <a href="{% url 'logout' %}" class="btn-logout">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Logout
+          </a>
+        </div>
+      </aside>
+      <div class="main-content">
+        <header class="topbar">
+          <div>
+            <div class="topbar-brand">Lakasahara Medical Supplies Co.</div>
+            <h2 class="topbar-title">{% block page_title %}{% endblock %}</h2>
+          </div>
+          <div class="topbar-right">
+            {% block page_header_actions %}{% endblock %}
+            {% for message in messages %}<span class="badge badge-{% if message.tags == 'error' %}danger{% else %}success{% endif %}">{{ message }}</span>{% endfor %}
+            <div class="notification-menu">
+              <button type="button" class="notification-trigger" aria-label="Notifications" aria-expanded="false">
+                <span aria-hidden="true">&#128276;</span><strong>{{ notification_total }}</strong>
+              </button>
+              <div class="notification-panel" aria-hidden="true">
+                <div class="notification-panel-header">
+                  <div>
+                    <h3>Notifications</h3>
+                    <p>{{ notification_total }} alerts require attention</p>
+                  </div>
+                  <button type="button" class="notification-close" aria-label="Close notifications">&times;</button>
+                </div>
+                <div class="notification-summary">
+                  <span class="notification-summary-critical">● {{ notification_critical_count }} Critical</span>
+                  <span class="notification-summary-warning">● {{ notification_warning_count }} Warning</span>
+                  <span class="notification-summary-info">● {{ notification_info_count }} Info</span>
+                </div>
+                <div class="notification-list">
+                  {% for alert in notification_alerts %}
+                    <div class="notification-item notification-item-{{ alert.kind }}">
+                      <span class="notification-item-icon">●</span>
+                      <div>
+                        <strong>{{ alert.title }}</strong>
+                        <p>{{ alert.message }}</p>
+                        <small>Needs attention</small></div>
+                    </div>
+                  {% empty %}
+                    <div class="notification-empty">No alerts right now.</div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div class="page-body">{% block content %}{% endblock %}</div>
+      </div>
+    </div>
+    <script src="{% static 'js/app.js' %}?v=5"></script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

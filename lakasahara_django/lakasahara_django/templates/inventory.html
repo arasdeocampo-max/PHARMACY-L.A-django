@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Inventory Monitor — L.A{% endblock %}
+{% block page_title %}Inventory Monitor{% endblock %}
+{% block page_header_actions %}
+  <div class="inventory-header-actions">
+    <form method="get" action="{% url 'inventory' %}" class="inventory-header-search">
+      <span class="inventory-header-search-icon" aria-hidden="true">⌕</span>
+      <input type="search" name="search" value="{{ search }}" placeholder="Search products or barcodes" aria-label="Search products or barcodes">
+      <input type="hidden" name="cat" value="{{ cat }}">
+      <input type="hidden" name="status" value="{{ status_filter }}">
+    </form>
+    <span class="inventory-header-pill inventory-header-pill-out">{{ out_of_stock_count }} Out of Stock</span>
+    <span class="inventory-header-pill inventory-header-pill-low">{{ low_stock_count }} Low Stock</span>
+  </div>
+{% endblock %}
+{% block content %}
+  <div class="inventory-monitor">
+    <section class="inventory-kpis">
+      <div class="inventory-kpi inventory-kpi-products">
+        <div class="inventory-kpi-label">Total Products</div>
+        <div class="inventory-kpi-value">{{ total_products }}</div>
+        <div class="inventory-kpi-note">in catalog</div>
+      </div>
+      <div class="inventory-kpi inventory-kpi-stock">
+        <div class="inventory-kpi-label">Low / Out of Stock</div>
+        <div class="inventory-kpi-value">{{ low_stock_count }} / {{ out_of_stock_count }}</div>
+        <div class="inventory-kpi-note">need reorder</div>
+      </div>
+      <div class="inventory-kpi inventory-kpi-expired">
+        <div class="inventory-kpi-label">Expired Batches</div>
+        <div class="inventory-kpi-value">{{ expired_batches }}</div>
+        <div class="inventory-kpi-note">for disposal</div>
+      </div>
+      <div class="inventory-kpi inventory-kpi-expiring">
+        <div class="inventory-kpi-label">Expiring &lt;30 Days</div>
+        <div class="inventory-kpi-value">{{ expiring_soon }}</div>
+        <div class="inventory-kpi-note">urgent action</div>
+      </div>
+    </section>
+
+    <section class="card inventory-toolbar-card">
+      <form method="get" class="inventory-filter-bar">
+        <div class="inventory-search-wrap">
+          <span class="inventory-search-icon">⌕</span>
+          <input type="text" name="search" value="{{ search }}" class="inventory-search-input" placeholder="Search product or barcode...">
+        </div>
+        <select name="cat" class="inventory-filter-select js-filter-submit">
+          <option value="">All Categories</option>
+          <option value="Medicine" {% if cat == 'Medicine' %}selected{% endif %}>Medicine</option>
+          <option value="Medical Supply" {% if cat == 'Medical Supply' %}selected{% endif %}>Medical Supply</option>
+        </select>
+        <select name="status" class="inventory-filter-select js-filter-submit">
+          <option value="">All Statuses</option>
+          <option value="in_stock" {% if status_filter == 'in_stock' %}selected{% endif %}>In Stock</option>
+          <option value="low_stock" {% if status_filter == 'low_stock' %}selected{% endif %}>Low Stock</option>
+          <option value="out_of_stock" {% if status_filter == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+        </select>
+        {% if search or cat or status_filter %}<a href="{% url 'inventory' %}" class="btn btn-light btn-sm">Clear</a>{% endif %}
+      </form>
+    </section>
+
+    <section class="card inventory-card">
+      <div class="table-wrap">
+        <table class="table inventory-table">
+          <colgroup>
+            <col class="inventory-col-expand">
+            <col class="inventory-col-product">
+            <col class="inventory-col-batch">
+            <col class="inventory-col-expiry">
+            <col class="inventory-col-total">
+            <col class="inventory-col-sellable">
+            <col class="inventory-col-expired">
+            <col class="inventory-col-status">
+            <col class="inventory-col-supplier">
+            <col class="inventory-col-actions">
+          </colgroup>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Product / Batch</th>
+              <th>Batch No.</th>
+              <th>Expiry Date</th>
+              <th class="inventory-table-right">Total</th>
+              <th class="inventory-table-right">Sellable</th>
+              <th class="inventory-table-right">Expired</th>
+              <th>Status</th>
+              <th>Supplier</th>
+              <th class="inventory-table-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in products %}
+              <tr class="inv-product-row {% if p.stock == 0 %}inventory-row-out{% elif p.expired_qty > 0 %}inventory-row-expired{% elif p.stock <= p.reorder_level %}inventory-row-low{% else %}inventory-row-good{% endif %}" data-product="{{ p.pk }}">
+                <td class="inventory-expand-cell">
+                  <button type="button" class="inventory-expand-button inv-toggle-btn" data-product="{{ p.pk }}" aria-expanded="false" aria-label="Toggle batches">›</button>
+                </td>
+                <td>
+                  <div class="inventory-product-cell">
+                    {% if p.image_url %}<img src="{{ p.image_url }}" class="inventory-product-image" alt="">{% endif %}
+                    <div class="inventory-product-meta">
+                      <div class="inventory-product-name">{{ p.name }}</div>
+                      <div class="inventory-product-barcode">{{ p.barcode }}</div>
+                      <div class="inventory-batches-meta">{{ p.batches.count }} batch{{ p.batches.count|pluralize:"es" }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="inventory-batches-meta">{% if p.batches.count == 1 %}{% with first_batch=p.batches.all|first %}{{ first_batch.batch_number }}{% endwith %}{% else %}—{% endif %}</td>
+                <td class="inventory-batches-meta">{% if p.batches.count == 1 %}{% with first_batch=p.batches.all|first %}{{ first_batch.expiry }}{% endwith %}{% else %}—{% endif %}</td>
+                <td class="inventory-stock-cell inventory-table-right">{{ p.total_qty }}</td>
+                <td class="inventory-stock-cell inventory-table-right {% if p.stock == 0 %}stock-zero{% elif p.stock <= p.reorder_level %}stock-low{% else %}stock-good{% endif %}">{{ p.stock }}</td>
+                <td class="inventory-stock-cell inventory-table-right stock-zero">{{ p.expired_qty }}</td>
+                <td>
+                  {% if p.stock == 0 %}<span class="badge badge-danger">Out of Stock</span>
+                  {% elif p.stock <= p.reorder_level %}<span class="badge badge-warning">Low Stock</span>
+                  {% else %}<span class="badge badge-success">In Stock</span>{% endif %}
+                </td>
+                <td class="inventory-supplier">{% if p.supplier %}{{ p.supplier.name }}{% endif %}</td>
+                <td class="inventory-table-right">
+                  <div class="inventory-actions-row">
+                    {% if role == 'admin' or role == 'pharmacist' %}<button type="button" class="btn btn-light btn-xs inv-modal-trigger inv-stop-prop" data-modal-target="add-batch-modal-{{ p.pk }}">+ Batch</button>{% endif %}
+                    <button type="button" class="btn btn-light btn-xs inv-details-btn" data-modal-target="inventory-modal-{{ p.pk }}">Details</button>
+                  </div>
+                </td>
+              </tr>
+              <tr id="batches-{{ p.pk }}" class="inventory-details-row">
+                <td colspan="10" class="inventory-batch-cell">
+                  {% for b in p.batches.all %}
+                    {% if b.status != 'disposed' %}
+                      <div class="inventory-batch-row {% if b.status == 'expired' %}inventory-row-expired{% elif b.status == 'expiring-soon' or b.status == 'expiring-warning' %}inventory-row-low{% else %}inventory-row-good{% endif %}">
+                        <div class="inventory-batch-spacer"></div>
+                        <div>
+                          <div class="inventory-batch-number">{{ b.batch_number }}</div>
+                          <div class="inventory-batch-date">Received {{ b.received_date }}</div>
+                        </div>
+                        <div class="inventory-batch-number">{{ b.batch_number }}</div>
+                        <div>
+                          <div class="inventory-batch-expiry">{{ b.expiry }}</div>
+                          <div class="inventory-batch-remaining {% if b.days_until_expiry < 0 %}expiry-expired{% elif b.days_until_expiry <= 30 %}expiry-warning{% else %}expiry-safe{% endif %}">
+                            {% if b.days_until_expiry < 0 %}Expired{% else %}{{ b.days_until_expiry }}d left{% endif %}
+                          </div>
+                        </div>
+                        <div class="inventory-batch-qty">{{ b.quantity }}</div>
+                        <div class="inventory-batch-qty">
+                          {% if b.status == 'expired' %}0{% else %}{{ b.quantity }}{% endif %}
+                        </div>
+                        <div class="inventory-batch-qty stock-zero">
+                          {% if b.status == 'expired' %}{{ b.quantity }}{% else %}0{% endif %}
+                        </div>
+                        <div>
+                          <span class="badge badge-{% if b.status == 'expired' or b.status == 'expiring-soon' %}danger{% elif b.status == 'expiring-warning' %}warning{% else %}success{% endif %} inventory-batch-badge">{{ b.get_status_display }}</span>
+                        </div>
+                        <div class="inventory-batch-shelf"></div>
+                        <div>{% if role != 'staff' %}{% if b.status == 'expired' or b.status == 'expiring-soon' or b.status == 'expiring-warning' %}<button type="button" class="btn btn-danger btn-xs inv-modal-trigger inv-stop-prop" data-modal-target="dispose-modal-{{ b.pk }}">Dispose</button>{% endif %}{% endif %}</div>
+                      </div>
+                    {% endif %}
+                  {% empty %}<div class="inventory-batch-empty">No active batches.</div>
+                  {% endfor %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="10" class="inventory-empty-state">No products found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  {% for p in products %}
+    <div id="inventory-modal-{{ p.pk }}" class="inventory-modal-overlay" aria-hidden="true">
+      <section class="inventory-modal" role="dialog" aria-modal="true" aria-labelledby="inventory-modal-title-{{ p.pk }}">
+        <button type="button" class="inventory-modal-close inv-modal-close" data-modal-target="inventory-modal-{{ p.pk }}" aria-label="Close details">&times;</button>
+        <div class="inventory-modal-product">
+          {% if p.image_url %}<img src="{{ p.image_url }}" class="inventory-modal-image" alt="">{% else %}<div class="inventory-modal-image inventory-modal-placeholder">Rx</div>{% endif %}
+          <div><div class="inventory-modal-eyebrow">{{ p.category }} · {{ p.kind }}</div><h2 id="inventory-modal-title-{{ p.pk }}">{{ p.name }}</h2><p>{{ p.barcode }} · PHP {{ p.price }}/unit</p></div>
+        </div>
+        <div class="inventory-modal-kpis">
+          <div><span>Total Stock</span><strong>{{ p.total_qty }}</strong></div>
+          <div><span>Sellable Stock</span><strong>{{ p.stock }}</strong></div>
+          <div><span>Expired Stock</span><strong>{{ p.expired_qty }}</strong></div>
+        </div>
+        <h3 class="inventory-modal-section-title">Stock Batches</h3>
+        <div class="inventory-modal-batches">
+          {% for b in p.batches.all %}{% if b.status != 'disposed' %}
+            <div class="inventory-modal-batch">
+              <div><span>Batch No.</span><strong>{{ b.batch_number }}</strong></div>
+              <div><span>Expiry</span><strong>{{ b.expiry|date:"M d, Y" }}</strong><small>{% if b.days_until_expiry < 0 %}Expired{% else %}{{ b.days_until_expiry }}d left{% endif %}</small></div>
+              <div><span>Qty / Shelf</span><strong>{{ b.quantity }} units</strong><small>{{ b.shelf }}</small></div>
+              <div><span>Supplier</span><strong>{{ b.supplier_name|default:p.supplier.name|default:"—" }}</strong></div>
+              <div><span>Status</span><span class="inventory-modal-status inventory-modal-status-{{ b.status }}">{{ b.get_status_display }}</span></div>
+            </div>
+          {% endif %}{% empty %}<div class="inventory-modal-empty">No active batches.</div>{% endfor %}
+        </div>
+        {% if role == 'admin' or role == 'pharmacist' %}<a href="{% url 'add_batch_for' p.pk %}" class="inventory-modal-add">+ Add New Batch</a>{% endif %}
+      </section>
+    </div>
+    {% for b in p.batches.all %}
+      {% if role != 'staff' %}
+      {% if b.status == 'expired' or b.status == 'expiring-soon' or b.status == 'expiring-warning' %}
+        <div id="dispose-modal-{{ b.pk }}" class="inventory-modal-overlay" aria-hidden="true">
+          <section class="inventory-modal dispose-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="dispose-title-{{ b.pk }}">
+            <button type="button" class="inventory-modal-close inv-modal-close" data-modal-target="dispose-modal-{{ b.pk }}" aria-label="Close dispose confirmation">&times;</button>
+            <div class="receive-stock-heading">
+              <h3 id="dispose-title-{{ b.pk }}">Dispose Batch</h3>
+              <p>Review the batch details before recording disposal.</p>
+            </div>
+            <div class="dispose-confirm-details">
+              <div><span>Product</span><strong>{{ p.name }}</strong></div>
+              <div><span>Batch No.</span><strong>{{ b.batch_number }}</strong></div>
+              <div><span>Expired On</span><strong>{{ b.expiry|date:"M d, Y" }}</strong></div>
+              <div><span>Available Qty</span><strong>{{ b.quantity }} units</strong></div>
+              <div><span>Supplier</span><strong>{{ b.supplier_name|default:p.supplier.name|default:"—" }}</strong></div>
+            </div>
+            <form method="post" action="{% url 'dispose_batch' b.pk %}" class="dispose-inline-form">
+              {% csrf_token %}
+              <div class="form-group">
+                <label class="form-label" for="dispose-qty-{{ b.pk }}">Qty</label>
+                <input class="form-control" id="dispose-qty-{{ b.pk }}" name="qty" type="number" min="1" max="{{ b.quantity }}" value="{{ b.quantity }}" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="dispose-reason-{{ b.pk }}">Reason</label>
+                <input class="form-control" id="dispose-reason-{{ b.pk }}" name="reason" type="text" placeholder="e.g. Expired per batch record" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="dispose-authorized-{{ b.pk }}">Authorized by</label>
+                <input class="form-control" id="dispose-authorized-{{ b.pk }}" name="authorized_by" type="text" placeholder="Pharmacist or Admin name" required>
+              </div>
+              <div class="receive-stock-actions">
+              <button type="button" class="btn btn-light inv-modal-close" data-modal-target="dispose-modal-{{ b.pk }}">Cancel</button>
+                <button type="submit" class="btn btn-danger dispose-confirm-button">Confirm Disposal</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      {% endif %}
+      {% endif %}
+    {% endfor %}
+    {% if role == 'admin' or role == 'pharmacist' %}
+      <div id="add-batch-modal-{{ p.pk }}" class="inventory-modal-overlay" aria-hidden="true">
+        <section class="inventory-modal add-batch-modal" role="dialog" aria-modal="true" aria-labelledby="add-batch-title-{{ p.pk }}">
+          <button type="button" class="inventory-modal-close inv-modal-close" data-modal-target="add-batch-modal-{{ p.pk }}" aria-label="Close add batch form">&times;</button>
+          <div class="receive-stock-heading">
+            <h3 id="add-batch-title-{{ p.pk }}">Add Batch</h3>
+            <p>Add stock under <strong>{{ p.name }}</strong>. This will not create a new product.</p>
+          </div>
+          <form method="post" action="{% url 'add_batch_for' p.pk %}">
+            {% csrf_token %}
+            <div class="receive-stock-fields">
+              {% for field in p.receive_form %}
+                <div class="form-group receive-stock-field receive-stock-field-{{ field.name }}">
+                  <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.errors %}<div class="form-error">{{ field.errors.0 }}</div>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+            <div class="receive-stock-actions">
+              <button type="button" class="btn btn-light inv-modal-close" data-modal-target="add-batch-modal-{{ p.pk }}">Cancel</button>
+              <button type="submit" class="btn btn-primary">Add Batch</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    {% endif %}
+  {% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/inventory.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends 'base.html' %} {% block title %}Staff Dashboard — L.A{% endblock %}
+{% block page_title %}Staff Dashboard{% endblock %} {% block content %}
+  <div class="workspace-shell">
+    <div class="workspace-topbar">
+      <div class="workspace-brand">
+        <div class="workspace-icon">STF</div>
+        <div><strong>Staff Workspace</strong></div>
+      </div>
+      <div class="summary-chip">Quick search and live POS</div>
+    </div>
+    <div class="workspace-body">
+      <div class="hero-banner staff-hero">
+        <div class="staff-hero-content">
+          <div>
+            <div class="eyebrow">Front Counter Operations</div>
+            <h2 class="staff-hero-title">
+              Fast checkout workflow for pharmacy staff
+            </h2>
+            <p class="staff-hero-copy">
+              Search medicines, build carts, and process transactions.
+            </p>
+          </div>
+          <a
+            href="{% url 'sales' %}"
+            class="btn btn-primary"
+            class="btn btn-primary staff-pos-button"
+          >Launch Sales POS</a
+            >
+          </div>
+        </div>
+        <div class="kpi-grid mb-1 staff-kpi-grid">
+          <div class="kpi-card staff-kpi-transactions">
+            <div class="kpi-label">Today's Transactions</div>
+            <div class="kpi-value">
+              {{ transaction_count }}
+            </div>
+          </div>
+          <div class="kpi-card staff-kpi-revenue">
+            <div class="kpi-label">Revenue Today</div>
+            <div class="kpi-value">
+              PHP {{ today_revenue|floatformat:2 }}
+            </div>
+          </div>
+          <div class="kpi-card staff-kpi-products">
+            <div class="kpi-label">OTC Items Available</div>
+            <div class="kpi-value">{{ products.count }}</div>
+          </div>
+        </div>
+        <div class="card card-body mb-1">
+          <div class="staff-section-title staff-notes-title">
+            Cashier Notes
+          </div>
+          <div class="staff-note staff-note-generic">
+            Suggest generic alternatives when branded stock is low.
+          </div>
+          <div class="staff-note staff-note-rx">
+            Request pharmacist approval before dispensing RX items.
+          </div>
+        </div>
+        <div class="card card-body">
+          <div class="staff-section-title">
+            Quick Product Browse
+          </div>
+          <div class="staff-product-grid">
+            {% for p in products %}
+              <div class="staff-product-card">
+                <a
+                  href="{% url 'sales' %}"
+                  class="staff-product-link"
+                >{% if p.image_url %}<img
+                  src="{{ p.image_url }}"
+                  class="staff-product-image"
+                  alt=""
+                />{% endif %}
+                  <div class="staff-product-name">{{ p.name }}</div>
+                  <div class="staff-product-meta">
+                    <span class="staff-product-price"
+                    >PHP {{ p.price }}</span
+                      ><span
+                        class="badge badge-{% if p.stock == 0 %}danger{% elif p.stock <= p.reorder_level %}warning{% else %}success{% endif %}"
+                        class="badge badge-{% if p.stock == 0 %}danger{% elif p.stock <= p.reorder_level %}warning{% else %}success{% endif %} staff-product-status"
+                      >{% if p.stock == 0 %}Out{% elif p.stock <= p.reorder_level %}Low{% else %}OK{% endif %}</span>
+                      </div></a
+                      ><button
+                        type="button"
+                        class="btn btn-light btn-xs js-open-product-modal"
+                        data-product-name="{{ p.name }}"
+                        data-product-category="{{ p.category }}"
+                        data-product-kind="{{ p.kind }}"
+                        data-product-type="{{ p.type }}"
+                        data-product-price="{{ p.price }}"
+                        data-product-stock="{{ p.stock }}"
+                        data-product-barcode="{{ p.barcode }}"
+                        data-product-shelf="{{ p.shelf }}"
+                      >View</button>
+              </div>
+            {% empty %}
+              <div class="staff-empty">No OTC products.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="product-modal" class="modal-overlay" aria-hidden="true">
+    <div class="modal product-modal" role="dialog" aria-modal="true" aria-labelledby="product-modal-title">
+      <button type="button" class="modal-close js-close-modal" data-modal-target="product-modal" aria-label="Close product modal">&#10005;</button>
+      <div class="eyebrow">Product Details</div>
+      <h3 id="product-modal-title" class="product-modal-title">Product</h3>
+      <div class="product-modal-details">
+        <div class="product-modal-row">
+          <span class="product-modal-label">
+            Category
+          </span>
+            <span id="product-modal-category" class="product-modal-value">-</span>
+          </div>
+        <div class="product-modal-row">
+          <span class="product-modal-label">Kind</span>
+          <span id="product-modal-kind" class="product-modal-value">-</span>
+        </div>
+        <div class="product-modal-row">
+          <span class="product-modal-label">Type</span>
+          <span id="product-modal-type" class="product-modal-value">-</span>
+        </div>
+        <div class="product-modal-row">
+          <span class="product-modal-label">Price</span>
+          <span id="product-modal-price" class="product-modal-value">-</span>
+          </div>
+        <div class="product-modal-row">
+          <span class="product-modal-label">Stock</span>
+          <span id="product-modal-stock" class="product-modal-value">-</span>
+        </div>
+        <div class="product-modal-row">
+          <span class="product-modal-label">Barcode</span>
+          <span id="product-modal-barcode" class="product-modal-value">-</span>
+        </div>
+        <div class="product-modal-row">
+          <span class="product-modal-label">Shelf</span>
+          <span id="product-modal-shelf" class="product-modal-value">-</span>
+        </div>
+      </div>
+      <div class="admin-modal-actions product-modal-actions">
+        <button type="button" class="btn btn-light admin-modal-cancel js-close-modal" data-modal-target="product-modal">Close</button>
+        <a href="{% url 'sales' %}" class="btn btn-primary admin-modal-submit">Open POS</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
