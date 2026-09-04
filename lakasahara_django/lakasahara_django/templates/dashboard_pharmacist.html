@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Pharmacist Dashboard — L.A{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_header_actions %}
+  <div class="inventory-header-actions">
+    <form method="get" action="{% url 'inventory' %}" class="inventory-header-search"><span class="inventory-header-search-icon" aria-hidden="true">⌕</span><input type="search" placeholder="Search products or barcodes" aria-label="Search products or barcodes"></form>
+    <span class="inventory-header-pill inventory-header-pill-out">{{ out_of_stock_count }} Out of Stock</span>
+    <span class="inventory-header-pill inventory-header-pill-low">{{ low_stock_count }} Low Stock</span>
+  </div>
+{% endblock %}
+{% block content %}
+<div class="pharmacist-dashboard">
+  <section class="pharmacist-workspace-bar">
+    <div class="pharmacist-workspace-title"><span class="pharmacist-workspace-icon">RPh</span><strong>Pharmacist Workspace</strong></div>
+    <span class="pharmacist-summary-chip">Expiry checks, stock review, and guided actions</span>
+  </section>
+  <section class="pharmacist-hero">
+    <div><div class="eyebrow">Pharmacist Workspace</div><h2>Medication oversight with guided daily actions</h2><p>Review stock health, monitor product expiry, and support safe dispensing with streamlined workflows.</p></div>
+    <div class="pharmacist-hero-actions"><a href="{% url 'inventory' %}" class="btn btn-primary btn-sm">Inventory Board</a></div>
+  </section>
+  <section class="pharmacist-kpis">
+    {% for k in kpis %}<div class="pharmacist-kpi pharmacist-kpi-{{ forloop.counter }}"><div class="pharmacist-kpi-icon"></div><div class="kpi-label">{{ k.label }}</div><div class="kpi-value">{{ k.value }}</div><div class="kpi-note">{{ k.sub }}</div></div>{% endfor %}
+  </section>
+  <div class="pharmacist-dashboard-grid">
+    <section class="card pharmacist-panel pharmacist-expiration-panel">
+      <div class="pharmacist-panel-heading"><div><h3>Expiration Tracking</h3><p>Products that need pharmacist attention soon</p></div><a href="{% url 'expiry' %}" class="btn btn-light btn-xs">View All</a></div>
+      <div class="pharmacist-table-wrap"><table class="table pharmacist-table"><thead><tr><th>Product</th><th>Type</th><th>Expiry</th><th>Status</th><th>Stock</th><th>Edit</th></tr></thead><tbody>
+        {% for e in expiring %}<tr><td><div class="pharmacist-product"><div class="pharmacist-product-image">{% if e.product.image_url %}<img src="{{ e.product.image_url }}" alt="">{% endif %}</div><div><strong>{{ e.product.name }}</strong><small>{{ e.product.barcode }}</small></div></div></td><td><span class="pill-{{ e.product.type|lower }}">{{ e.product.type }}</span></td><td>{{ e.expiry }}</td><td><span class="badge {% if e.days < 0 %}badge-danger{% elif e.days <= 90 %}badge-warning{% else %}badge-success{% endif %}">{% if e.days < 0 %}Expired{% elif e.days <= 90 %}Expiring{% else %}Monitoring{% endif %}</span></td><td class="pharmacist-table-number">{{ e.product.stock }}</td><td><a href="{% url 'product_edit' e.product.pk %}" class="pharmacist-edit-button" aria-label="Edit {{ e.product.name }}">&#9998;</a></td></tr>{% empty %}<tr><td colspan="6" class="pharmacist-empty">No products expiring within 180 days</td></tr>{% endfor %}
+      </tbody></table></div>
+    </section>
+    <div class="pharmacist-side-panels">
+      <section class="card pharmacist-panel pharmacist-queue-panel"><div class="pharmacist-panel-heading"><div><h3>Stock Adjustment Queue</h3><p>Review pending quantity updates before approval.</p></div></div>{% for p in products %}{% if p.stock <= p.reorder_level %}<div class="pharmacist-queue-item"><input type="checkbox" class="pharmacist-queue-checkbox" data-product-name="{{ p.name }}" aria-label="Select {{ p.name }} for approval"><div class="pharmacist-product-image">{% if p.image_url %}<img src="{{ p.image_url }}" alt="">{% endif %}</div><strong>{{ p.name }}</strong><span>{{ p.stock }} → {{ p.reorder_level }} units</span><button type="button" aria-label="Remove adjustment">−</button><button type="button" aria-label="Add adjustment">+</button></div>{% endif %}{% endfor %}<button type="button" class="pharmacist-approve-button" disabled>Approve Selected (0)</button></section>
+      <div id="approval-modal" class="inventory-modal-overlay" aria-hidden="true">
+        <section class="inventory-modal approval-modal" role="dialog" aria-modal="true" aria-labelledby="approval-modal-title">
+          <button type="button" class="inventory-modal-close approval-modal-close" aria-label="Close approval modal">&times;</button>
+          <div class="receive-stock-heading"><h3 id="approval-modal-title">Approve Stock Adjustments</h3><p>Review the selected quantity updates before approval.</p></div>
+          <ul class="approval-selected-list"></ul>
+          <div class="receive-stock-actions"><button type="button" class="btn btn-light approval-modal-close">Cancel</button><button type="button" class="btn btn-success approval-confirm-button">Confirm Approval</button></div>
+        </section>
+      </div>
+    </div>
+    <section class="card pharmacist-panel pharmacist-checklist-panel"><div class="pharmacist-panel-heading"><div><h3>Pharmacist Checklist</h3><p>Suggested daily routine for presentation simulation.</p></div></div><ul class="pharmacist-checklist"><li>Verify low-stock medications before opening shift.</li><li>Review prescriptions pending for fulfillment.</li><li>Inspect nearing-expiry product batches.</li><li>Coordinate with staff on fast-moving item replenishment.</li></ul></section>
+  </div>
+</div>
+{% endblock %}

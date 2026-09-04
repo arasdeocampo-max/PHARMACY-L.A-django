@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% block title %}Reports — L.A{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block content %}
+  <div class="workspace-shell">
+    <div class="workspace-topbar">
+      <div class="workspace-brand">
+        <div class="workspace-icon">RPT</div>
+        <div><strong>Reports Workspace</strong></div>
+      </div>
+      <div class="summary-chip">Audit-ready summaries</div>
+    </div>
+
+    <div class="workspace-body">
+      <div class="reports-heading">
+        <div>
+          <div class="eyebrow">Reports Center</div>
+          <h2>Pharmacy analytics and audit trail</h2>
+          <p>Generate and review operational reports with real-time snapshot data.</p>
+        </div>
+        <div class="reports-heading-actions">
+          <form method="get" class="reports-period-form">
+            <input type="hidden" name="report" value="{{ active_report }}">
+            <select name="period" class="reports-period-select" onchange="this.form.submit()" aria-label="Report period">
+              <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+              <option value="week" {% if period == 'week' %}selected{% endif %}>This Week</option>
+              <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+              <option value="quarter" {% if period == 'quarter' %}selected{% endif %}>This Quarter</option>
+            </select>
+          </form>
+          <a href="?report={{ active_report }}&period={{ period }}&export=csv" class="btn btn-light reports-export-button">Export CSV</a>
+        </div>
+      </div>
+      <div class="reports-tabs">
+        <a href="?report=sales" class="btn btn-sm {% if active_report == 'sales' %}btn-primary{% else %}btn-light{% endif %}">Sales Summary</a>
+        <a href="?report=inventory" class="btn btn-sm {% if active_report == 'inventory' %}btn-primary{% else %}btn-light{% endif %}">Inventory Status</a>
+        <a href="?report=expiry" class="btn btn-sm {% if active_report == 'expiry' %}btn-primary{% else %}btn-light{% endif %}">Expiry Report</a>
+        <a href="?report=reorder" class="btn btn-sm {% if active_report == 'reorder' %}btn-primary{% else %}btn-light{% endif %}">Reorder Alerts</a>
+        <a href="?report=returns" class="btn btn-sm {% if active_report == 'returns' %}btn-primary{% else %}btn-light{% endif %}">Supplier Returns</a>
+      </div>
+
+      {% if active_report == 'sales' %}
+        <div class="grid-4 mb-1">
+          <div class="kpi-card report-kpi report-kpi-revenue">
+            <div class="report-kpi-value report-kpi-revenue-value">PHP {{ total_revenue|floatformat:2 }}</div>
+            <div class="kpi-note">Total Revenue</div>
+          </div>
+          <div class="kpi-card report-kpi report-kpi-transactions">
+            <div class="report-kpi-value report-kpi-transactions-value">{{ sales.count }}</div>
+            <div class="kpi-note">Transactions</div>
+          </div>
+          <div class="kpi-card report-kpi report-kpi-average">
+            <div class="report-kpi-value report-kpi-average-value">PHP {{ avg_sale|floatformat:2 }}</div>
+            <div class="kpi-note">Avg Sale</div>
+          </div>
+          <div class="kpi-card report-kpi report-kpi-method">
+            <div class="report-kpi-value report-kpi-method-value">Cash</div>
+            <div class="kpi-note">Top Method</div>
+          </div>
+        </div>
+
+        <div class="card card-body">
+          <div class="report-section-title">Transaction Log</div>
+          <div class="table-wrap report-table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Date/Time</th>
+                  <th>Cashier</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Method</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for s in sales %}
+                  <tr>
+                    <td class="report-transaction-id">{{ s.transaction_id }}</td>
+                    <td class="report-muted-small">{{ s.created_at|date:"M d, Y H:i" }}</td>
+                    <td class="report-small-text">
+                      {% if s.cashier %}{{ s.cashier.get_full_name }}{% else %}—{% endif %}
+                    </td>
+                    <td class="report-small-text">
+                      {% for item in s.items.all %}
+                        <span class="report-item-pill">{{ item.product_name }} ×{{ item.qty }}</span>
+                      {% endfor %}
+                    </td>
+                    <td class="report-total-cell">PHP {{ s.total }}</td>
+                    <td><span class="badge badge-info report-method-badge">{{ s.method }}</span></td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="6" class="report-empty-cell">No transactions yet.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      {% elif active_report == 'inventory' %}
+        <div class="card card-body">
+          <div class="report-section-title">Current Inventory Status</div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th>Stock</th>
+                  <th>Reorder At</th>
+                  <th>Unit Price</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in products %}
+                  <tr>
+                    <td>
+                      <div class="report-product-inline">
+                        {% if p.image_url %}
+                          <img src="{{ p.image_url }}" class="report-product-image" alt="">
+                        {% endif %}
+                        <div class="report-product-name">{{ p.name }}</div>
+                      </div>
+                    </td>
+                    <td>{{ p.category }}</td>
+                    <td><span class="pill-{{ p.type|lower }}">{{ p.type }}</span></td>
+                    <td class="report-stock-cell">{{ p.stock }}</td>
+                    <td>{{ p.reorder_level }}</td>
+                    <td class="report-price-cell">PHP {{ p.price|floatformat:2 }}</td>
+                    <td>
+                      {% with sl=p.stock_label %}
+                        <span class="badge {{ sl.1 }}">{{ sl.0 }}</span>
+                      {% endwith %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      {% elif active_report == 'expiry' %}
+        <div class="card card-body">
+          <div class="report-section-title">Expiry Report — within 180 days</div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Type</th>
+                  <th>Days Left</th>
+                  <th>Stock</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for e in expiring %}
+                  <tr class="report-expiry-row {% if e.days < 0 %}report-expiry-row-expired{% else %}report-expiry-row-warning{% endif %}">
+                    <td class="report-product-name">{{ e.product.name }}</td>
+                    <td><span class="pill-{{ e.product.type|lower }}">{{ e.product.type }}</span></td>
+                    <td class="report-days-cell {% if e.days < 0 %}report-days-expired{% elif e.days <= 90 %}report-days-critical{% else %}report-days-warning{% endif %}">
+                      {% if e.days < 0 %}Expired{% else %}{{ e.days }}d{% endif %}
+                    </td>
+                    <td class="report-stock-cell">{{ e.product.stock }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="report-empty-cell">No products expiring within 180 days.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      {% elif active_report == 'reorder' %}
+        <div class="card card-body">
+          <div class="report-section-title">Reorder Alert Report</div>
+          <div class="report-reorder-list">
+            {% for p in out_of_stock %}
+              <div class="report-reorder-item report-reorder-item-out">
+                {% if p.image_url %}
+                  <img src="{{ p.image_url }}" class="report-reorder-image" alt="">
+                {% endif %}
+                <div class="report-reorder-content">
+                  <div class="report-reorder-name">{{ p.name }}</div>
+                  <div class="report-reorder-meta">
+                    Stock: <strong>{{ p.stock }}</strong> / Reorder: <strong>{{ p.reorder_level }}</strong>
+                  </div>
+                </div>
+                <span class="badge badge-danger">Out of Stock</span>
+              </div>
+            {% endfor %}
+
+            {% for p in low_stock %}
+              <div class="report-reorder-item report-reorder-item-low">
+                {% if p.image_url %}
+                  <img src="{{ p.image_url }}" class="report-reorder-image" alt="">
+                {% endif %}
+                <div class="report-reorder-content">
+                  <div class="report-reorder-name">{{ p.name }}</div>
+                  <div class="report-reorder-meta">
+                    Stock: <strong>{{ p.stock }}</strong> / Reorder: <strong>{{ p.reorder_level }}</strong>
+                  </div>
+                </div>
+                <span class="badge badge-warning">Low Stock</span>
+              </div>
+            {% endfor %}
+
+            {% if not out_of_stock and not low_stock %}
+              <div class="report-empty-cell">All stock levels are healthy.</div>
+            {% endif %}
+          </div>
+        </div>
+      {% elif active_report == 'returns' %}
+        <div class="card card-body">
+          <div class="report-section-title">Supplier Returns</div>
+          <div class="table-wrap report-table-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date/Time</th>
+                  <th>Batch No.</th>
+                  <th>Authorized By</th>
+                  <th>Return Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for event in returns %}
+                  <tr>
+                    <td class="report-muted-small">{{ event.created_at|date:"M d, Y H:i" }}</td>
+                    <td class="report-transaction-id">{{ event.target }}</td>
+                    <td class="report-small-text">{% if event.actor %}{{ event.actor.get_full_name|default:event.actor.username }}{% else %}—{% endif %}</td>
+                    <td class="report-small-text">{{ event.detail }}</td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="report-empty-cell">No supplier returns recorded for this period.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
